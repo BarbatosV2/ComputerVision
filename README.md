@@ -147,8 +147,6 @@ Can use the features combine to make clear vision. These are some examples.
 
 ![histogram + thermal](https://github.com/user-attachments/assets/dda5e48b-f853-4b15-91ed-6460c8d47672)
 
-![canny + thermal](https://github.com/user-attachments/assets/00979ac8-4ea3-4884-9b51-8608a527f484)
-
 **Histogram + Negative + Background Substraction**
 
 ![histo + negative + bs](https://github.com/user-attachments/assets/aadb679f-fb09-4903-b365-8a93b73a6f2e)
