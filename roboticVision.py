@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
+import os
+import time
 
-def draw_robotic_ui(frame):
+def draw_robotic_ui(frame, recording, start_time):
     height, width, _ = frame.shape
     cv2.line(frame, (width // 2, 0), (width // 2, height), (0, 255, 0), 1)
     cv2.line(frame, (0, height // 2), (width, height // 2), (0, 255, 0), 1)
@@ -11,9 +13,25 @@ def draw_robotic_ui(frame):
     cv2.rectangle(frame, top_left, bottom_right, (255, 0, 0), 2)
     cv2.putText(frame, "Robotic Vision UI", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     cv2.putText(frame, "Press 'q' to quit", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-    for i in range(3):
-        center = (np.random.randint(0, width), np.random.randint(0, height))
-        cv2.circle(frame, center, 5, (0, 0, 255), -1)
+
+    # Draw capture button with double loop
+    center_capture = (width - 30, 30)
+    cv2.circle(frame, center_capture, 20, (0, 0, 0), -1)  # Black circle for outline
+    cv2.circle(frame, center_capture, 18, (255, 255, 255), -1)  # White circle for capture
+    cv2.circle(frame, center_capture, 16, (0, 0, 0), 2)  # Inner outline
+
+    # Draw record button with double loop
+    center_record = (width - 30, 70)
+    cv2.circle(frame, center_record, 20, (0, 0, 0), -1)  # Black circle for outline
+    cv2.circle(frame, center_record, 18, (0, 0, 255), -1)  # Red circle for record
+    cv2.circle(frame, center_record, 16, (0, 0, 0), 2)  # Inner outline
+
+    # Show recording status and time
+    if recording:
+        elapsed_time = int(time.time() - start_time)
+        cv2.circle(frame, (width - 30, height - 30), 10, (0, 0, 255), -1)  # Red dot for recording
+        cv2.putText(frame, f"REC {elapsed_time}s", (width - 100, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
     return frame
 
 def apply_sobel(frame, sobel_mode):
@@ -121,22 +139,27 @@ def apply_histogram_equalization(frame):
     equalized = cv2.equalizeHist(gray)
     return cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)
 
-bg_subtractor = cv2.createBackgroundSubtractorMOG2()
-
 def apply_background_subtraction(frame):
+    global bg_subtractor
+    if 'bg_subtractor' not in globals():
+        bg_subtractor = cv2.createBackgroundSubtractorMOG2()
     fg_mask = bg_subtractor.apply(frame)
     return cv2.cvtColor(fg_mask, cv2.COLOR_GRAY2BGR)
 
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
-aruco_params = cv2.aruco.DetectorParameters()
-
 def apply_aruco_markers(frame):
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+    aruco_params = cv2.aruco.DetectorParameters_create()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, rejected = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=aruco_params)
     frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
     return frame
 
 def main():
+    # Create capture directory if it doesn't exist
+    capture_dir = "capture"
+    if not os.path.exists(capture_dir):
+        os.makedirs(capture_dir)
+
     # Use DirectShow backend
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     
@@ -163,6 +186,37 @@ def main():
 
     prev_frame = None
     prev_points = None
+
+    recording = False
+    out = None
+    start_time = None
+
+    def mouse_callback(event, x, y, flags, param):
+        nonlocal recording, out, start_time
+        width = frame.shape[1]
+        if event == cv2.EVENT_LBUTTONDOWN:
+            # Check if the capture button is clicked
+            if (width - 50) < x < (width - 10) and 10 < y < 50:
+                capture_path = os.path.join(capture_dir, f"capture_{int(time.time())}.png")
+                cv2.imwrite(capture_path, frame)
+                print(f"Captured image saved at {capture_path}")
+
+            # Check if the record button is clicked
+            elif (width - 50) < x < (width - 10) and 50 < y < 90:
+                if recording:
+                    recording = False
+                    out.release()
+                    print("Recording stopped.")
+                else:
+                    recording = True
+                    start_time = time.time()
+                    video_path = os.path.join(capture_dir, f"record_{int(start_time)}.avi")
+                    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                    out = cv2.VideoWriter(video_path, fourcc, 20.0, (640, 480))
+                    print(f"Recording started. Video will be saved at {video_path}")
+
+    cv2.namedWindow('Robotic Vision UI')
+    cv2.setMouseCallback('Robotic Vision UI', mouse_callback)
 
     while True:
         ret, frame = cap.read()
@@ -212,7 +266,7 @@ def main():
         if show_aruco_markers:
             frame = apply_aruco_markers(frame)
 
-        frame = draw_robotic_ui(frame)
+        frame = draw_robotic_ui(frame, recording, start_time)
 
         cv2.imshow('Robotic Vision UI', frame)
 
@@ -258,8 +312,29 @@ def main():
             show_background_subtraction = not show_background_subtraction
         elif key == ord('a'):
             show_aruco_markers = not show_aruco_markers
+        elif key == ord(' '):  # Space bar to capture image
+            capture_path = os.path.join(capture_dir, f"capture_{int(time.time())}.png")
+            cv2.imwrite(capture_path, frame)
+            print(f"Captured image saved at {capture_path}")
+        elif key == ord('v'):  # 'v' key to toggle video recording
+            if recording:
+                recording = False
+                out.release()
+                print("Recording stopped.")
+            else:
+                recording = True
+                start_time = time.time()
+                video_path = os.path.join(capture_dir, f"record_{int(start_time)}.avi")
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                out = cv2.VideoWriter(video_path, fourcc, 20.0, (640, 480))
+                print(f"Recording started. Video will be saved at {video_path}")
+        
+        if recording:
+            out.write(frame)
 
     cap.release()
+    if recording:
+        out.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
