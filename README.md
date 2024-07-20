@@ -26,7 +26,7 @@ Histogram Equalization
 
 Background Substraction
 
-Aruco Markers
+Aruco Markers (not working yet)
 
 # Original Feed
 
