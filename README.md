@@ -4,29 +4,18 @@ In this feature, my Gunpla model, SAZABI Ver Ka will illustate the features of t
 
 # Features
 
-Sobel
-
-Negative
-
-Thermal
-
-Canny
-
-Cartoon
-
-Face Detection
-
-Motion Detection
-
-Hough Lines
-
-Hough Circles
-
-Histogram Equalization
-
-Background Substraction
-
-Aruco Markers (not working yet)
++ Sobel
++ Negative
++ Thermal
++ Canny
++ Cartoon
++ Face Detection
++ Motion Detection
++ Hough Lines
++ Hough Circles
++ Histogram Equalization
++ Background Substraction
++ Aruco Markers (not working yet)
 
 # Original Feed
 
