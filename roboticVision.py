@@ -8,11 +8,16 @@ def draw_robotic_ui(frame, recording, start_time):
     cv2.line(frame, (width // 2, 0), (width // 2, height), (0, 255, 0), 1)
     cv2.line(frame, (0, height // 2), (width, height // 2), (0, 255, 0), 1)
     box_size = 50
-    top_left = (width // 2 - box_size, height // 2 - box_size)
-    bottom_right = (width // 2 + box_size, height // 2 + box_size)
-    cv2.rectangle(frame, top_left, bottom_right, (255, 0, 0), 2)
+    #top_left = (width // 2 - box_size, height // 2 - box_size)
+    #bottom_right = (width // 2 + box_size, height // 2 + box_size)
+    center = (width // 2, height // 2)
+    radius = 70
+    cv2.circle(frame, center, radius, (0, 255, 0), 1)
+    #cv2.rectangle(frame, top_left, bottom_right, (255, 0, 0), 2)
     cv2.putText(frame, "Robotic Vision UI", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     cv2.putText(frame, "Press 'q' to quit", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    cv2.circle(frame, (width // 2, height // 2), 2, (0, 0, 255), -1)
 
     # Draw capture button with double loop
     center_capture = (width - 30, 30)
@@ -154,13 +159,21 @@ def apply_aruco_markers(frame):
     frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
     return frame
 
+def apply_segmentation(frame, k=2):
+    pixel_values = frame.reshape((-1, 3))
+    pixel_values = np.float32(pixel_values)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+    _, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    centers = np.uint8(centers)
+    segmented_image = centers[labels.flatten()]
+    segmented_image = segmented_image.reshape(frame.shape)
+    return segmented_image
+
 def main():
-    # Create capture directory if it doesn't exist
     capture_dir = "capture"
     if not os.path.exists(capture_dir):
         os.makedirs(capture_dir)
 
-    # Use DirectShow backend
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     
     if not cap.isOpened():
@@ -181,6 +194,7 @@ def main():
     show_histogram_equalization = False
     show_background_subtraction = False
     show_aruco_markers = False
+    show_segmentation = False
 
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -195,13 +209,11 @@ def main():
         nonlocal recording, out, start_time
         width = frame.shape[1]
         if event == cv2.EVENT_LBUTTONDOWN:
-            # Check if the capture button is clicked
             if (width - 50) < x < (width - 10) and 10 < y < 50:
                 capture_path = os.path.join(capture_dir, f"capture_{int(time.time())}.png")
                 cv2.imwrite(capture_path, frame)
                 print(f"Captured image saved at {capture_path}")
 
-            # Check if the record button is clicked
             elif (width - 50) < x < (width - 10) and 50 < y < 90:
                 if recording:
                     recording = False
@@ -224,7 +236,7 @@ def main():
             print("Error: Could not read frame.")
             break
 
-        frame = cv2.resize(frame, (640, 480))  # Resize to 640x480
+        frame = cv2.resize(frame, (640, 480))
 
         if show_sobel:
             frame = apply_sobel(frame, sobel_mode)
@@ -265,6 +277,9 @@ def main():
 
         if show_aruco_markers:
             frame = apply_aruco_markers(frame)
+
+        if show_segmentation:
+            frame = apply_segmentation(frame)
 
         frame = draw_robotic_ui(frame, recording, start_time)
 
@@ -312,11 +327,13 @@ def main():
             show_background_subtraction = not show_background_subtraction
         elif key == ord('a'):
             show_aruco_markers = not show_aruco_markers
-        elif key == ord(' '):  # Space bar to capture image
+        elif key == ord('s'):  # 's' key to toggle segmentation
+            show_segmentation = not show_segmentation
+        elif key == ord(' '):
             capture_path = os.path.join(capture_dir, f"capture_{int(time.time())}.png")
             cv2.imwrite(capture_path, frame)
             print(f"Captured image saved at {capture_path}")
-        elif key == ord('v'):  # 'v' key to toggle video recording
+        elif key == ord('v'):
             if recording:
                 recording = False
                 out.release()
