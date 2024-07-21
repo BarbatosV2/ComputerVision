@@ -19,6 +19,29 @@ def draw_robotic_ui(frame, recording, start_time):
 
     cv2.circle(frame, (width // 2, height // 2), 2, (0, 0, 255), -1)
 
+    # Add small lines (ticks) at each 45-degree interval
+    tick_length = 15
+    angles = [ 45, 135, 225, 315]
+    for angle in angles:
+        radians = np.deg2rad(angle)
+        x_outer = int(center[0] + radius * np.cos(radians))
+        y_outer = int(center[1] - radius * np.sin(radians))
+        x_inner = int(center[0] + (radius - tick_length) * np.cos(radians))
+        y_inner = int(center[1] - (radius - tick_length) * np.sin(radians))
+        cv2.line(frame, (x_inner, y_inner), (x_outer, y_outer), (0, 0, 255), 3)
+
+    # Add small ticks at half the radius on the major axes (0, 90, 180, 270 degrees)
+    half_radius = radius / 2
+    half_tick_length = 1
+    major_angles = [0, 90, 180, 270]
+    for angle in major_angles:
+        radians = np.deg2rad(angle)
+        x_outer = int(center[0] + half_radius * np.cos(radians))
+        y_outer = int(center[1] - half_radius * np.sin(radians))
+        x_inner = int(center[0] + (half_radius - half_tick_length) * np.cos(radians))
+        y_inner = int(center[1] - (half_radius - half_tick_length) * np.sin(radians))
+        cv2.line(frame, (x_inner, y_inner), (x_outer, y_outer), (0, 0, 255), 2)
+
     # Draw capture button with double loop
     center_capture = (width - 30, 30)
     cv2.circle(frame, center_capture, 20, (0, 0, 0), -1)  # Black circle for outline
