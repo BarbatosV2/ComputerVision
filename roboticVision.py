@@ -2,8 +2,11 @@ import cv2
 import numpy as np
 import os
 import time
+import tkinter as tk
+from tkinter import Button
+import cv2.aruco as aruco  
 
-def draw_robotic_ui(frame, recording, start_time):
+def draw_robotic_ui(frame, recording, start_time, status_text="", button_states=None):
     height, width, _ = frame.shape
     cv2.line(frame, (width // 2, 0), (width // 2, height), (0, 255, 0), 1)
     cv2.line(frame, (0, height // 2), (width, height // 2), (0, 255, 0), 1)
@@ -54,12 +57,16 @@ def draw_robotic_ui(frame, recording, start_time):
     cv2.circle(frame, center_record, 18, (0, 0, 255), -1)  # Red circle for record
     cv2.circle(frame, center_record, 16, (0, 0, 0), 2)  # Inner outline
 
-    # Show recording status and time
+    # Dynamic Status Bar at the bottom
+    cv2.rectangle(frame, (0, frame.shape[0] - 40), (frame.shape[1], frame.shape[0]), (50, 50, 50), -1)
+    cv2.putText(frame, status_text, (10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    # Recording Indicator Enhancement
     if recording:
         elapsed_time = int(time.time() - start_time)
-        cv2.circle(frame, (width - 30, height - 30), 10, (0, 0, 255), -1)  # Red dot for recording
+        if elapsed_time % 2 == 0:  # Pulsate every second
+            cv2.circle(frame, (width - 30, height - 30), 10, (0, 0, 255), -1)
         cv2.putText(frame, f"REC {elapsed_time}s", (width - 100, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
     return frame
 
 def apply_sobel(frame, sobel_mode):
@@ -175,11 +182,12 @@ def apply_background_subtraction(frame):
     return cv2.cvtColor(fg_mask, cv2.COLOR_GRAY2BGR)
 
 def apply_aruco_markers(frame):
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
-    aruco_params = cv2.aruco.DetectorParameters_create()
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)  # Correct method for creating dictionary
+    aruco_params = aruco.DetectorParameters()  # Instantiate DetectorParameters directly
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    corners, ids, rejected = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=aruco_params)
-    frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
+    corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict, parameters=aruco_params)
+    if ids is not None:
+        frame = aruco.drawDetectedMarkers(frame, corners, ids)
     return frame
 
 def apply_segmentation(frame, k=2):
@@ -253,6 +261,7 @@ def main():
     cv2.namedWindow('Robotic Vision UI')
     cv2.setMouseCallback('Robotic Vision UI', mouse_callback)
 
+    
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -262,6 +271,7 @@ def main():
         frame = cv2.resize(frame, (640, 480))
 
         if show_sobel:
+            status_text = "Sobel Mode Active"
             frame = apply_sobel(frame, sobel_mode)
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
