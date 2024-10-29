@@ -15,7 +15,7 @@ In this feature, my Gunpla model, SAZABI Ver Ka will illustate the features of t
 + Hough Circles
 + Histogram Equalization
 + Background Substraction
-+ Aruco Markers (not working yet)
++ Aruco Markers
 
 # Original Feed
 
@@ -111,6 +111,7 @@ https://github.com/user-attachments/assets/b6f171d0-3663-4d81-b5ce-33f15f5e71ef
 # Aruco Markers
 
 Press  **A** to scan ```Aruco Markers```
+![capture_1730170770](https://github.com/user-attachments/assets/6679dd4a-2cf2-4e16-80aa-85fea7ba64e3)
 
 # Other Combine Usages
 
