@@ -3,7 +3,8 @@ import numpy as np
 import os
 import time
 import tkinter as tk
-from tkinter import Button
+from tkinter import Button, Frame
+from PIL import Image, ImageTk
 import cv2.aruco as aruco  
 
 def draw_robotic_ui(frame, recording, start_time, status_text="", button_states=None):
@@ -17,7 +18,6 @@ def draw_robotic_ui(frame, recording, start_time, status_text="", button_states=
     radius = 70
     cv2.circle(frame, center, radius, (0, 255, 0), 1)
     #cv2.rectangle(frame, top_left, bottom_right, (255, 0, 0), 2)
-    cv2.putText(frame, "Robotic Vision UI", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     cv2.putText(frame, "Press 'q' to quit", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     cv2.circle(frame, (width // 2, height // 2), 2, (0, 0, 255), -1)
@@ -56,10 +56,6 @@ def draw_robotic_ui(frame, recording, start_time, status_text="", button_states=
     cv2.circle(frame, center_record, 20, (0, 0, 0), -1)  # Black circle for outline
     cv2.circle(frame, center_record, 18, (0, 0, 255), -1)  # Red circle for record
     cv2.circle(frame, center_record, 16, (0, 0, 0), 2)  # Inner outline
-
-    # Dynamic Status Bar at the bottom
-    cv2.rectangle(frame, (0, frame.shape[0] - 40), (frame.shape[1], frame.shape[0]), (50, 50, 50), -1)
-    cv2.putText(frame, status_text, (10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     # Recording Indicator Enhancement
     if recording:
@@ -381,7 +377,7 @@ def main():
         
         if recording:
             out.write(frame)
-
+    
     cap.release()
     if recording:
         out.release()
