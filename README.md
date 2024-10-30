@@ -111,7 +111,9 @@ https://github.com/user-attachments/assets/b6f171d0-3663-4d81-b5ce-33f15f5e71ef
 # Aruco Markers
 
 Press  **A** to scan ```Aruco Markers```
-![capture_1730170770](https://github.com/user-attachments/assets/6679dd4a-2cf2-4e16-80aa-85fea7ba64e3)
+
+![capture_1730268776](https://github.com/user-attachments/assets/2645a191-8e9c-4ce1-8275-9b784557f8f3)
+
 
 # Other Combine Usages
 
