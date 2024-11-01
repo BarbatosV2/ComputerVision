@@ -78,21 +78,58 @@ def apply_thermal(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     return cv2.applyColorMap(gray, cv2.COLORMAP_JET)
 
-def apply_optical_flow(prev_frame, current_frame, prev_points):
-    if prev_frame is None or prev_points is None:
-        return current_frame, None, None
+def apply_nightvision(frame):
+    # Convert the frame to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+    # Enhance contrast by applying a histogram equalization
+    enhanced = cv2.equalizeHist(gray)
+
+    # Apply a green tint to simulate night vision
+    green_tinted = cv2.applyColorMap(enhanced, cv2.COLORMAP_SUMMER)
+
+    # Adjust brightness and contrast if needed
+    alpha = 1.5  # Contrast control (1.0-3.0)
+    beta = 20    # Brightness control (0-100)
+    night_vision_frame = cv2.convertScaleAbs(green_tinted, alpha=alpha, beta=beta)
+
+    return night_vision_frame
+
+prev_frame = None
+
+def apply_optical_flow(frame):
+    global prev_frame
+    
+    # If there's no previous frame, save the current frame and return it
+    if prev_frame is None:
+        prev_frame = frame
+        return frame
+
+    # Convert frames to grayscale
     prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-    current_gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
-    next_points, status, error = cv2.calcOpticalFlowPyrLK(prev_gray, current_gray, prev_points, None)
-    good_new = next_points[status == 1]
-    good_old = prev_points[status == 1]
-    for i, (new, old) in enumerate(zip(good_new, good_old)):
-        a, b = new.ravel().astype(int)
-        c, d = old.ravel().astype(int)
-        current_frame = cv2.line(current_frame, (a, b), (c, d), (0, 255, 0), 2)
-        current_frame = cv2.circle(current_frame, (a, b), 5, (0, 0, 255), -1)
-    return current_frame, good_new.reshape(-1, 1, 2), status
+    current_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    # Calculate Farneback dense optical flow
+    flow = cv2.calcOpticalFlowFarneback(prev_gray, current_gray, None,
+                                        pyr_scale=0.5, levels=3, winsize=15,
+                                        iterations=3, poly_n=5, poly_sigma=1.2, flags=0)
+    
+    # Calculate the magnitude and angle of the flow vectors
+    magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+    
+    # Create an HSV image where hue represents direction and value represents magnitude
+    hsv = np.zeros_like(frame)
+    hsv[..., 1] = 255  # Set saturation to max
+    hsv[..., 0] = angle * 180 / np.pi / 2  # Direction in degrees
+    hsv[..., 2] = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)  # Magnitude as brightness
+    
+    # Convert HSV to BGR for display
+    flow_bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    
+    # Update the previous frame
+    prev_frame = frame
+
+    return flow_bgr
 
 def apply_canny(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -114,18 +151,29 @@ def apply_face_detection(frame, face_cascade):
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
     return frame
 
-def apply_motion_detection(prev_frame, current_frame):
+def apply_motion_detection(current_frame):
+    global prev_frame
+    
     if prev_frame is None:
+        # If there is no previous frame, set the current frame as the previous frame
+        prev_frame = current_frame.copy()
         return current_frame, current_frame.copy()
+    
+    # Calculate the difference between the previous frame and the current frame
     diff = cv2.absdiff(prev_frame, current_frame)
     gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
     for contour in contours:
         if cv2.contourArea(contour) < 500:
             continue
         x, y, w, h = cv2.boundingRect(contour)
         cv2.rectangle(current_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    
+    # Update the previous frame to the current frame
+    prev_frame = current_frame.copy()
+    
     return current_frame, current_frame.copy()
 
 def apply_hough_lines(frame):
@@ -207,6 +255,7 @@ def main():
     show_negative = False
     recording = False
     show_thermal = False
+    show_nightvision = False
     show_optical_flow = False
     show_canny = False
     show_cartoon = False
@@ -286,12 +335,47 @@ def main():
     def toggle_optic_flow():
         nonlocal show_optical_flow
         show_optical_flow = not show_optical_flow
-        optic_flow_label.config(text=f"Canny: {'ON' if show_optical_flow else 'OFF'}")
+        optic_flow_label.config(text=f"Optic Flow: {'ON' if show_optical_flow else 'OFF'}")
         
     def toggle_canny():
         nonlocal show_canny
         show_canny = not show_canny
         canny_label.config(text=f"Canny: {'ON' if show_canny else 'OFF'}")
+        
+    def toggle_segmentation():
+        nonlocal show_segmentation
+        show_segmentation = not show_segmentation
+        segmentation_label.config(text=f"Segmentation: {'ON' if show_segmentation else 'OFF'}")
+    
+    def toggle_face_detection():
+        nonlocal show_face_detection
+        show_face_detection = not show_face_detection
+        face_detection_label.config(text=f"Face Detection: {'ON' if show_face_detection else 'OFF'}")
+        
+    def toggle_nightvision():
+        nonlocal show_nightvision
+        show_nightvision = not show_nightvision
+        nightvision_label.config(text=f"Night Vision: {'ON' if show_nightvision else 'OFF'}")
+        
+    def toggle_motion_detection():
+        nonlocal show_motion_detection
+        show_motion_detection = not show_motion_detection
+        motion_detection_label.config(text=f"Motion Detection: {'ON' if show_motion_detection else 'OFF'}")
+        
+    def toggle_hough_lines():
+        nonlocal show_hough_lines
+        show_hough_lines = not show_hough_lines
+        hough_lines_label.config(text=f"Hough Lines: {'ON' if show_hough_lines else 'OFF'}")
+        
+    def toggle_hough_circles():
+        nonlocal show_hough_circles
+        show_hough_circles = not show_hough_circles
+        hough_circles_label.config(text=f"Hough Circles: {'ON' if show_hough_circles else 'OFF'}")
+        
+    def toggle_aruco_markers():
+        nonlocal show_aruco_markers
+        show_aruco_markers = not show_aruco_markers
+        aruco_markers_label.config(text=f"Aruco Markers: {'ON' if show_aruco_markers else 'OFF'}")
 
     # Status frame for filters
     status_frame = Frame(root)
@@ -314,6 +398,27 @@ def main():
     
     canny_label = Label(status_frame, text="Canny: OFF")
     canny_label.pack(pady=5)
+    
+    segmentation_label = Label(status_frame, text="Segmentation: OFF")
+    segmentation_label.pack(pady=5)
+    
+    face_detection_label = Label(status_frame, text="Face Detection: OFF")
+    face_detection_label.pack(pady=5)
+    
+    nightvision_label = Label(status_frame, text="Night Vision: OFF")
+    nightvision_label.pack(pady=5)
+    
+    motion_detection_label = Label(status_frame, text="Motion Detection: OFF")
+    motion_detection_label.pack(pady=5)
+    
+    hough_lines_label = Label(status_frame, text="Hough Lines: OFF")
+    hough_lines_label.pack(pady=5)
+    
+    hough_circles_label = Label(status_frame, text="Hough Circles: OFF")
+    hough_circles_label.pack(pady=5)
+    
+    aruco_markers_label = Label(status_frame, text="Aruco Markers: OFF")
+    aruco_markers_label.pack(pady=5)
 
     # Button Frame
     button_frame = Frame(root)
@@ -327,6 +432,13 @@ def main():
     Button(button_frame, text="Toggle Thermal", command=toggle_thermal).pack(pady=5)
     Button(button_frame, text="Toggle Optic Flow", command=toggle_optic_flow).pack(pady=5)
     Button(button_frame, text="Toggle Canny", command=toggle_canny).pack(pady=5)
+    Button(button_frame, text="Toggle Segmentation", command=toggle_segmentation).pack(pady=5)
+    Button(button_frame, text="Toggle Face Detection", command=toggle_face_detection).pack(pady=5)
+    Button(button_frame, text="Toggle Night Vision", command=toggle_nightvision).pack(pady=5)
+    Button(button_frame, text="Toggle Motion Detection", command=toggle_motion_detection).pack(pady=5)
+    Button(button_frame, text="Toggle Hough Lines", command=toggle_hough_lines).pack(pady=5)
+    Button(button_frame, text="Toggle Hough Circles", command=toggle_hough_circles).pack(pady=5)
+    Button(button_frame, text="Toggle Aruco Markers", command=toggle_aruco_markers).pack(pady=5)
 
     def update_frame():
         global frame  # Access the global frame variable
@@ -350,7 +462,31 @@ def main():
             
         if show_canny:
             frame = apply_canny(frame)
-
+            
+        if show_optical_flow:
+            frame = apply_optical_flow(frame)
+            
+        if show_segmentation:
+            frame = apply_segmentation(frame)
+            
+        if show_face_detection:
+            frame = apply_face_detection(frame, face_cascade)
+            
+        if show_nightvision:
+            frame = apply_nightvision(frame)
+            
+        if show_motion_detection:
+            frame, _ = apply_motion_detection(frame)
+            
+        if show_hough_lines:
+            frame = apply_hough_lines(frame)
+        
+        if show_hough_circles:
+            frame = apply_hough_circles(frame)
+        
+        if show_aruco_markers:
+            frame = apply_aruco_markers(frame)
+            
         frame = draw_robotic_ui(frame, recording, start_time, capture_indicator)
 
         # Convert OpenCV image to Tkinter format
@@ -384,6 +520,20 @@ def main():
             toggle_thermal()
         elif event.char == 't':
             toggle_canny()
+        elif event.char == 's':
+            toggle_segmentation()
+        elif event.char == 'n':
+            toggle_nightvision()
+        elif event.char == 'f':
+            toggle_face_detection()
+        elif event.char == 'm':
+            toggle_motion_detection()
+        elif event.char == 'i':
+            toggle_hough_lines()
+        elif event.char == 'o':
+            toggle_hough_circles()
+        elif event.char == 'a':
+            toggle_aruco_markers()
         elif event.char == ' ':
             capture_path = os.path.join(capture_dir, f"capture_{int(time.time())}.png")
             cv2.imwrite(capture_path, frame)  # Save the current frame
