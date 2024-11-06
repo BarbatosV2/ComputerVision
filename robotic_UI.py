@@ -372,6 +372,16 @@ def main():
         show_hough_circles = not show_hough_circles
         hough_circles_label.config(text=f"Hough Circles: {'ON' if show_hough_circles else 'OFF'}")
         
+    def toggle_histogram_equalization():
+        nonlocal show_histogram_equalization
+        show_histogram_equalization = not show_histogram_equalization
+        histogram_equalization_label.config(text=f"Histogram Equalization: {'ON' if show_histogram_equalization else 'OFF'}")
+        
+    def toggle_background_subtraction():
+        nonlocal show_background_subtraction
+        show_background_subtraction = not show_background_subtraction
+        background_subtraction_label.config(text=f"Background Substraction: {'ON' if show_background_subtraction else 'OFF'}")
+        
     def toggle_aruco_markers():
         nonlocal show_aruco_markers
         show_aruco_markers = not show_aruco_markers
@@ -417,6 +427,12 @@ def main():
     hough_circles_label = Label(status_frame, text="Hough Circles: OFF")
     hough_circles_label.pack(pady=5)
     
+    histogram_equalization_label = Label(status_frame, text="Histogram Equaliaztion: OFF")
+    histogram_equalization_label.pack(pady=5)
+    
+    background_subtraction_label = Label(status_frame, text="Background Substraction: OFF")
+    background_subtraction_label.pack(pady=5)
+    
     aruco_markers_label = Label(status_frame, text="Aruco Markers: OFF")
     aruco_markers_label.pack(pady=5)
 
@@ -428,17 +444,19 @@ def main():
     Button(button_frame, text="Sobel X", command=lambda: set_sobel_mode('x')).pack(pady=5)
     Button(button_frame, text="Sobel Y", command=lambda: set_sobel_mode('y')).pack(pady=5)
     Button(button_frame, text="Sobel XY", command=lambda: set_sobel_mode('xy')).pack(pady=5)
-    Button(button_frame, text="Toggle Negative", command=toggle_negative).pack(pady=5)
-    Button(button_frame, text="Toggle Thermal", command=toggle_thermal).pack(pady=5)
-    Button(button_frame, text="Toggle Optic Flow", command=toggle_optic_flow).pack(pady=5)
-    Button(button_frame, text="Toggle Canny", command=toggle_canny).pack(pady=5)
-    Button(button_frame, text="Toggle Segmentation", command=toggle_segmentation).pack(pady=5)
-    Button(button_frame, text="Toggle Face Detection", command=toggle_face_detection).pack(pady=5)
-    Button(button_frame, text="Toggle Night Vision", command=toggle_nightvision).pack(pady=5)
-    Button(button_frame, text="Toggle Motion Detection", command=toggle_motion_detection).pack(pady=5)
-    Button(button_frame, text="Toggle Hough Lines", command=toggle_hough_lines).pack(pady=5)
-    Button(button_frame, text="Toggle Hough Circles", command=toggle_hough_circles).pack(pady=5)
-    Button(button_frame, text="Toggle Aruco Markers", command=toggle_aruco_markers).pack(pady=5)
+    Button(button_frame, text="Negative", command=toggle_negative).pack(pady=5)
+    Button(button_frame, text="Thermal", command=toggle_thermal).pack(pady=5)
+    Button(button_frame, text="Optic Flow", command=toggle_optic_flow).pack(pady=5)
+    Button(button_frame, text="Canny", command=toggle_canny).pack(pady=5)
+    Button(button_frame, text="Segmentation", command=toggle_segmentation).pack(pady=5)
+    Button(button_frame, text="Face Detection", command=toggle_face_detection).pack(pady=5)
+    Button(button_frame, text="Night Vision", command=toggle_nightvision).pack(pady=5)
+    Button(button_frame, text="Motion Detection", command=toggle_motion_detection).pack(pady=5)
+    Button(button_frame, text="Hough Lines", command=toggle_hough_lines).pack(pady=5)
+    Button(button_frame, text="Hough Circles", command=toggle_hough_circles).pack(pady=5)
+    Button(button_frame, text="Histogram Equalization", command=toggle_histogram_equalization).pack(pady=5)
+    Button(button_frame, text="Background Substraction", command=toggle_background_subtraction).pack(pady=5)
+    Button(button_frame, text="Aruco Markers", command=toggle_aruco_markers).pack(pady=5)
 
     def update_frame():
         global frame  # Access the global frame variable
@@ -483,6 +501,12 @@ def main():
         
         if show_hough_circles:
             frame = apply_hough_circles(frame)
+        
+        if show_histogram_equalization:
+            frame = apply_histogram_equalization(frame)
+            
+        if show_background_subtraction:
+            frame = apply_background_subtraction(frame)
         
         if show_aruco_markers:
             frame = apply_aruco_markers(frame)
@@ -532,6 +556,10 @@ def main():
             toggle_hough_lines()
         elif event.char == 'o':
             toggle_hough_circles()
+        elif event.char == 'h':
+            toggle_histogram_equalization()
+        elif event.char == 'b':
+            toggle_background_subtraction()
         elif event.char == 'a':
             toggle_aruco_markers()
         elif event.char == ' ':
